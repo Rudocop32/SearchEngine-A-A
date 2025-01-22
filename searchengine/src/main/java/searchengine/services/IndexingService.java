@@ -71,8 +71,6 @@ public class IndexingService {
     }
 
 
-
-
     private void deleteSiteAndPageIfExist() {
         List<SiteEntity> siteEntitiesFromRepository = siteRepository.findAll();
         for (SiteEntity siteEntity : siteEntitiesFromRepository) {
@@ -119,10 +117,7 @@ public class IndexingService {
                 try {
                     PageIndexing pageIndexing = new PageIndexing(siteRepository, pageRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity, /*pageEntity,*/indexingProcessing);
 
-                    ArrayList<PageEntity> pages =forkJoinPool.invoke(pageIndexing); //pageIndexing.compute();
-//                    pageRepository.saveAll(pages);
-
-
+                    ArrayList<PageEntity> pages = forkJoinPool.invoke(pageIndexing); //pageIndexing.compute();
 
 
 
@@ -151,13 +146,12 @@ public class IndexingService {
             thread.join();
         }
         List<SiteEntity> indexedSiteList = new ArrayList<>();
-        for(SiteEntity indexedSite : siteRepository.findAll()){
+        for (SiteEntity indexedSite : siteRepository.findAll()) {
 
 
             indexedSite.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             indexedSite.setStatusType(Status.INDEXED);
             siteRepository.save(indexedSite);
-
 
 
         }

@@ -36,7 +36,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
 
-    private final ConcurrentHashMap<String,Boolean> lookedLinks;
+    private final ConcurrentHashMap<String, Boolean> lookedLinks;
 
     private final String url;
     private final String mainUrl;
@@ -45,10 +45,10 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
     private final SiteEntity siteEntity;
 
-//    private final PageEntity page;
+    //    private final PageEntity page;
     private final AtomicBoolean indexingProcessing;
 
-    public PageIndexing(SiteRepository siteRepository, PageRepository pageRepository, ConcurrentHashMap<String, Boolean> lookedLinks, String url, String mainUrl, int level, SiteEntity siteEntity , /*PageEntity page,*/ AtomicBoolean indexingProcessing) {
+    public PageIndexing(SiteRepository siteRepository, PageRepository pageRepository, ConcurrentHashMap<String, Boolean> lookedLinks, String url, String mainUrl, int level, SiteEntity siteEntity, /*PageEntity page,*/ AtomicBoolean indexingProcessing) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.lookedLinks = lookedLinks;
@@ -61,35 +61,27 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     }
 
     @Override
-    protected ArrayList<PageEntity > compute() {
-
+    protected ArrayList<PageEntity> compute() {
 
 
         ArrayList<PageEntity> resultLinks = new ArrayList<>();
 
-        if(!indexingProcessing.get()){
+        if (!indexingProcessing.get()) {
             return resultLinks;
         }
 
-
-//        if(level>4) return resultLinks;
         try {
             sleep(150);
 
+            Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
 
-                Document doc = Jsoup.connect(url).timeout(100000)
-                        .userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6")
-                        .referrer("http://www.google.com")
-                        .get();
+            Elements elements = doc.select("a[href]");
+            Connection.Response response = Jsoup.connect(url).execute();
 
-                Elements elements = doc.select("a[href]");
-                Connection.Response response = Jsoup.connect(url).execute();
 
-//
-            if(!indexingProcessing.get()){
+            if (!indexingProcessing.get()) {
                 return resultLinks;
             }
-
 
             PageEntity pageEntity = new PageEntity();
 
@@ -99,27 +91,22 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
             pageEntity.setContent(doc.toString());
 
             ExampleMatcher exampleMatcher = ExampleMatcher.matching().withIgnorePaths("id");
-            Example<PageEntity> example = Example.of(pageEntity,exampleMatcher);
+            Example<PageEntity> example = Example.of(pageEntity, exampleMatcher);
 
-            if(pageRepository.exists(example)){
-                pageEntity=pageRepository.findByPath(pageEntity.getPath()).get(0);
+            if (pageRepository.exists(example)) {
+                pageEntity = pageRepository.findByPath(pageEntity.getPath()).get(0);
                 pageRepository.save(pageEntity);
-            }
-            else {
-                try{
+            } else {
+                try {
                     pageRepository.save(pageEntity);
 
-                }catch (DataIntegrityViolationException e){
+                } catch (DataIntegrityViolationException e) {
 
                 }
             }
 
-
-
             siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepository.save(siteEntity);
-
-
 
             ArrayList<PageIndexing> parsers = new ArrayList<>();
 
@@ -146,31 +133,25 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
             }
 
 
-
-
-
             for (PageIndexing pageIndexing : parsers) {
-                if(!indexingProcessing.get()){
+                if (!indexingProcessing.get()) {
                     return resultLinks;
                 }
-                ArrayList<PageEntity> childLinks =pageIndexing.join();//pageIndexing.compute();
+                ArrayList<PageEntity> childLinks = pageIndexing.join();//pageIndexing.compute();
                 for (PageEntity child : childLinks) {
-                    if(!indexingProcessing.get()){
+                    if (!indexingProcessing.get()) {
                         return resultLinks;
                     }
                     resultLinks.add(child);
                 }
             }
 
-        }catch (IOException | InterruptedException | JpaSystemException | DataIntegrityViolationException e)  {
+        } catch (IOException | InterruptedException | JpaSystemException | DataIntegrityViolationException e) {
 
             return resultLinks;
         }
 
-
-
         return resultLinks;
-
 
     }
 

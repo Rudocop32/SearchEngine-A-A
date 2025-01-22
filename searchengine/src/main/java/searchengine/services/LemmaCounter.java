@@ -69,7 +69,7 @@ public class LemmaCounter {
                 indexEntity.setRank((float) lemmaCountInPage);
                 indexRepository.save(indexEntity);
                 lemmaRepository.save(lemmaEntity);
-            } else if (!lemmaInRepository.isEmpty() && lemmaInRepository.get(0).getSiteId().equals(pageEntity.getSiteId())) {
+            } else if (lemmaInRepository.get(0).getSiteId().equals(pageEntity.getSiteId())) {
                 lemmaEntity = lemmaInRepository.get(0);
                 lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
 
@@ -130,7 +130,7 @@ public class LemmaCounter {
 
     public List<String> saveOnlyLemmas(String text) throws IOException {
         List<String> lemmas = new ArrayList<>();
-        String words[] = text.split("\\s+");
+        String[] words = text.split("\\s+");
         List<String> textList = new ArrayList<>();
         String regex = "[^а-яА-я]";
 
