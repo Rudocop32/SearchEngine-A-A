@@ -173,9 +173,5 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
 
     }
-    public void refreshPage(PageEntity newPageEntity){
 
-        PageEntity pageEntity = pageRepository.findOne(example);
-
-    }
 }
