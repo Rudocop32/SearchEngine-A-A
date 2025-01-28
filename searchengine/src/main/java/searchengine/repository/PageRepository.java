@@ -8,15 +8,11 @@ import searchengine.model.SiteEntity;
 
 import java.util.List;
 
-public interface PageRepository extends JpaRepository<PageEntity,Integer> {
+public interface PageRepository extends JpaRepository<PageEntity, Integer> {
     List<PageEntity> findByPath(String path);
 
 
-
-
-        //    @Query("SELECT COUNT(*) FROM page WHERE siteid=?1")
-        //     long getCountOfSiteId(@Param("siteid") int siteId);
-
     List<PageEntity> findBySiteId(SiteEntity siteEntity);
-        int countBySiteId(SiteEntity siteEntity);
+
+    int countBySiteId(SiteEntity siteEntity);
 }

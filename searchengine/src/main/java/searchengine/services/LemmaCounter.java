@@ -26,12 +26,12 @@ import java.util.Map;
 @Service
 public class LemmaCounter {
 
-         private final PageRepository pageRepository;
+    private final PageRepository pageRepository;
 
-        private final LemmaRepository lemmaRepository;
-        private final IndexRepository indexRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
 
-        private final LuceneMorphology luceneMorphology;
+    private final LuceneMorphology luceneMorphology;
 
 
     public LemmaCounter(PageRepository pageRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException {
@@ -69,12 +69,11 @@ public class LemmaCounter {
                 indexEntity.setRank((float) lemmaCountInPage);
 
                 ExampleMatcher exampleMatcher = ExampleMatcher.matching().withIgnorePaths("id");
-                Example<IndexEntity> example = Example.of(indexEntity,exampleMatcher);
-                if(!indexRepository.exists(example)){
+                Example<IndexEntity> example = Example.of(indexEntity, exampleMatcher);
+                if (!indexRepository.exists(example)) {
                     lemmaRepository.save(lemmaEntity);
                     indexRepository.save(indexEntity);
-                }
-                else {
+                } else {
                     lemmaRepository.save(lemmaEntity);
                 }
 
@@ -87,13 +86,12 @@ public class LemmaCounter {
                 indexEntity.setRank((float) lemmaCountInPage);
 
                 ExampleMatcher exampleMatcher = ExampleMatcher.matching().withIgnorePaths("id");
-                Example<IndexEntity> example = Example.of(indexEntity,exampleMatcher);
+                Example<IndexEntity> example = Example.of(indexEntity, exampleMatcher);
 
-                if(!indexRepository.exists(example)){
+                if (!indexRepository.exists(example)) {
                     indexRepository.save(indexEntity);
 
                 }
-
 
 
                 lemmaRepository.save(lemmaEntity);
@@ -104,34 +102,33 @@ public class LemmaCounter {
         }
     }
 
-    public Map<String,Integer> lemmaCount(String url) throws IOException, InterruptedException {
-        Map<String,Integer> lemmas = new HashMap<>();
+    public Map<String, Integer> lemmaCount(String url) throws IOException, InterruptedException {
+        Map<String, Integer> lemmas = new HashMap<>();
         String text = parseHtmlToString(url);
         List<String> words = saveOnlyLemmas(text);
 
-//        List<Thread> lemmaCountList = new ArrayList<>();
-        for(String word : words){
-//            Runnable lemmaCounting = ()->{
+        List<Thread> lemmaCountList = new ArrayList<>();
+        for (String word : words) {
+            Runnable lemmaCounting = () -> {
 
                 List<String> normalForm = luceneMorphology.getNormalForms(word);
-                if(!lemmas.containsKey(normalForm.get(0))){
+                if (!lemmas.containsKey(normalForm.get(0))) {
                     lemmas.put(normalForm.get(0), 1);
-                }else {
-                    lemmas.replace(normalForm.get(0), lemmas.get(normalForm.get(0)), lemmas.get(normalForm.get(0)) +1);
+                } else {
+                    lemmas.replace(normalForm.get(0), lemmas.get(normalForm.get(0)), lemmas.get(normalForm.get(0)) + 1);
                 }
 
 
-
-//            };
-//            Thread thread = new Thread(lemmaCounting);
-//            lemmaCountList.add(thread);
-//            thread.start();
+            };
+            Thread thread = new Thread(lemmaCounting);
+            lemmaCountList.add(thread);
+            thread.start();
 
 
         }
-//        for(Thread thread : lemmaCountList){
-//            thread.join();
-//        }
+        for (Thread thread : lemmaCountList) {
+            thread.join();
+        }
         return lemmas;
 
     }
@@ -143,17 +140,17 @@ public class LemmaCounter {
         List<String> textList = new ArrayList<>();
         String regex = "[^а-яА-я]";
 
-        for(int i=0; i< words.length; i++) {
+        for (int i = 0; i < words.length; i++) {
             words[i] = words[i].replaceAll(regex, "");
             words[i] = words[i].toLowerCase();
-            if(!words[i].isEmpty()){
+            if (!words[i].isEmpty()) {
                 lemmas.addAll(luceneMorphology.getMorphInfo(words[i]));
 
-            }else {
+            } else {
                 continue;
             }
             String lemma = lemmas.get(0);
-            if ( (!lemma.contains("МЕЖД")) && (!lemma.contains("СОЮЗ")) && (!lemma.contains("ПРЕДЛ")) ) {
+            if ((!lemma.contains("МЕЖД")) && (!lemma.contains("СОЮЗ")) && (!lemma.contains("ПРЕДЛ"))) {
 
 
                 textList.add(luceneMorphology.getNormalForms(words[i]).get(0));
@@ -166,7 +163,7 @@ public class LemmaCounter {
     }
 
     private String parseHtmlToString(String url) throws IOException {
-            return pageRepository.findByPath(url).get(0).getContent();
+        return pageRepository.findByPath(url).get(0).getContent();
 
     }
 
@@ -175,15 +172,15 @@ public class LemmaCounter {
 
 
         for (PageEntity pageEntity : pageEntityList) {
-                if(pageEntity.getPath().contains(".pdf") || pageEntity.getPath().contains(".jpg")){
-                    continue;
-                }
-                String url = pageEntity.getPath();
-                try {
-                    saveLemmaToRepository(url);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
+            if (pageEntity.getPath().contains(".pdf") || pageEntity.getPath().contains(".jpg")) {
+                continue;
+            }
+            String url = pageEntity.getPath();
+            try {
+                saveLemmaToRepository(url);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
