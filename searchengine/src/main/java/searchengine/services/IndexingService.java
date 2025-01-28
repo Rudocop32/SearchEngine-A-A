@@ -43,6 +43,7 @@ public class IndexingService {
     private final ForkJoinPool forkJoinPool;
 
 
+
     public IndexingService(SiteRepository siteRepository, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
@@ -115,9 +116,10 @@ public class IndexingService {
 
                 inputLinks.put(siteEntity.getUrl(), false);
                 try {
-                    PageIndexing pageIndexing = new PageIndexing(siteRepository, pageRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity, /*pageEntity,*/indexingProcessing);
+                    LemmaCounter lemmaCounter = new LemmaCounter(pageRepository,lemmaRepository,indexRepository);
+                    PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity, /*pageEntity,*/indexingProcessing,lemmaCounter);
 
-                    ArrayList<PageEntity> pages = forkJoinPool.invoke(pageIndexing); //pageIndexing.compute();
+                    ArrayList<PageEntity> pages =  pageIndexing.compute();
 
 
 
@@ -126,6 +128,8 @@ public class IndexingService {
                     sitePage.setStatusType(Status.FAILED);
                     sitePage.setLastError(ex.getMessage());
                     siteRepository.save(sitePage);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
                 if (!indexingProcessing.get()) {
                     SiteEntity sitePage = siteRepository.findById(siteEntity.getId()).get();

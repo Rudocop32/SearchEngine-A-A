@@ -15,6 +15,8 @@ import searchengine.model.IndexEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
 
@@ -34,7 +36,7 @@ import static java.lang.Thread.sleep;
 
 public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     private final SiteRepository siteRepository;
-    private final PageRepository pageRepository;
+
 
     private final ConcurrentHashMap<String, Boolean> lookedLinks;
 
@@ -43,21 +45,24 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
     private final int level;
 
+
     private final SiteEntity siteEntity;
 
-    //    private final PageEntity page;
     private final AtomicBoolean indexingProcessing;
 
-    public PageIndexing(SiteRepository siteRepository, PageRepository pageRepository, ConcurrentHashMap<String, Boolean> lookedLinks, String url, String mainUrl, int level, SiteEntity siteEntity, /*PageEntity page,*/ AtomicBoolean indexingProcessing) {
+    private final LemmaCounter lemmaCounter;
+
+    public PageIndexing(SiteRepository siteRepository,  ConcurrentHashMap<String, Boolean> lookedLinks, String url, String mainUrl, int level, SiteEntity siteEntity, AtomicBoolean indexingProcessing,LemmaCounter lemmaCounter) {
         this.siteRepository = siteRepository;
-        this.pageRepository = pageRepository;
         this.lookedLinks = lookedLinks;
         this.url = url;
         this.mainUrl = mainUrl;
         this.level = level;
         this.siteEntity = siteEntity;
-//        this.page = page;
+        this.lemmaCounter = lemmaCounter;
         this.indexingProcessing = indexingProcessing;
+
+
     }
 
     @Override
@@ -71,7 +76,10 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
         }
 
         try {
-            sleep(150);
+//            sleep(150);
+
+
+
 
             Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
 
@@ -90,18 +98,26 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
             pageEntity.setCode(response.statusCode());
             pageEntity.setContent(doc.toString());
 
+
+
+
             ExampleMatcher exampleMatcher = ExampleMatcher.matching().withIgnorePaths("id");
             Example<PageEntity> example = Example.of(pageEntity, exampleMatcher);
 
-            if (pageRepository.exists(example)) {
-                pageEntity = pageRepository.findByPath(pageEntity.getPath()).get(0);
-                pageRepository.save(pageEntity);
+            if (lemmaCounter.getPageRepository().exists(example)) {
+                pageEntity = lemmaCounter.getPageRepository().findByPath(pageEntity.getPath()).get(0);
+                lemmaCounter.getPageRepository().save(pageEntity);
+                //lemmaCounter.saveLemmaToRepository(pageEntity.getPath());
             } else {
                 try {
-                    pageRepository.save(pageEntity);
+                    lemmaCounter.getPageRepository().save(pageEntity);
+                    lemmaCounter.saveLemmaToRepository(pageEntity.getPath());
 
                 } catch (DataIntegrityViolationException e) {
 
+                }
+                catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
             }
 
@@ -121,7 +137,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
 
                         resultLinks.add(pageEntity);
-                        PageIndexing pageIndexing = new PageIndexing(siteRepository, pageRepository, lookedLinks, link, this.mainUrl, level + 1, siteEntity,/*pageEntity,*/indexingProcessing);
+                        PageIndexing pageIndexing = new PageIndexing(siteRepository, lookedLinks, link, this.mainUrl, level + 1, siteEntity,/*pageEntity,*/indexingProcessing,lemmaCounter);
                         parsers.add(pageIndexing);
                         pageIndexing.fork();
                     } else if (!indexingProcessing.get()) {
@@ -146,7 +162,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
                 }
             }
 
-        } catch (IOException | InterruptedException | JpaSystemException | DataIntegrityViolationException e) {
+        } catch (IOException | JpaSystemException | DataIntegrityViolationException e) {
 
             return resultLinks;
         }

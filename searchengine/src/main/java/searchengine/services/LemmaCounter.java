@@ -67,8 +67,17 @@ public class LemmaCounter {
                 indexEntity.setLemmaId(lemmaEntity);
                 indexEntity.setPageId(pageEntity);
                 indexEntity.setRank((float) lemmaCountInPage);
-                indexRepository.save(indexEntity);
-                lemmaRepository.save(lemmaEntity);
+
+                ExampleMatcher exampleMatcher = ExampleMatcher.matching().withIgnorePaths("id");
+                Example<IndexEntity> example = Example.of(indexEntity,exampleMatcher);
+                if(!indexRepository.exists(example)){
+                    lemmaRepository.save(lemmaEntity);
+                    indexRepository.save(indexEntity);
+                }
+                else {
+                    lemmaRepository.save(lemmaEntity);
+                }
+
             } else if (lemmaInRepository.get(0).getSiteId().equals(pageEntity.getSiteId())) {
                 lemmaEntity = lemmaInRepository.get(0);
                 lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
@@ -100,9 +109,9 @@ public class LemmaCounter {
         String text = parseHtmlToString(url);
         List<String> words = saveOnlyLemmas(text);
 
-        List<Thread> lemmaCountList = new ArrayList<>();
+//        List<Thread> lemmaCountList = new ArrayList<>();
         for(String word : words){
-            Runnable lemmaCounting = ()->{
+//            Runnable lemmaCounting = ()->{
 
                 List<String> normalForm = luceneMorphology.getNormalForms(word);
                 if(!lemmas.containsKey(normalForm.get(0))){
@@ -113,16 +122,16 @@ public class LemmaCounter {
 
 
 
-            };
-            Thread thread = new Thread(lemmaCounting);
-            lemmaCountList.add(thread);
-            thread.start();
+//            };
+//            Thread thread = new Thread(lemmaCounting);
+//            lemmaCountList.add(thread);
+//            thread.start();
 
 
         }
-        for(Thread thread : lemmaCountList){
-            thread.join();
-        }
+//        for(Thread thread : lemmaCountList){
+//            thread.join();
+//        }
         return lemmas;
 
     }
@@ -145,6 +154,8 @@ public class LemmaCounter {
             }
             String lemma = lemmas.get(0);
             if ( (!lemma.contains("МЕЖД")) && (!lemma.contains("СОЮЗ")) && (!lemma.contains("ПРЕДЛ")) ) {
+
+
                 textList.add(luceneMorphology.getNormalForms(words[i]).get(0));
 
             }

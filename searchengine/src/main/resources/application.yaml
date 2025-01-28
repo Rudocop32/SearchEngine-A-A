@@ -2,7 +2,7 @@
 
 indexing-settings:
   sites:
-    - url: https://lenta.ru/
+    - url: https://kuzovsibir.ru/
       name: Лента.ру
     - url: https://skillbox.ru/
       name: Skillbox
@@ -21,5 +21,5 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true

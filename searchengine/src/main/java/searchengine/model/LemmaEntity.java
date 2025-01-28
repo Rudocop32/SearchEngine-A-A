@@ -19,8 +19,8 @@ public class LemmaEntity {
     private int id;
 
 
-    @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "site_id",updatable = false)
+    @ManyToOne(cascade = CascadeType.MERGE)
+    @JoinColumn(name = "site_id")
     private SiteEntity siteId;
     @Column(name = "lemma", columnDefinition = "VARCHAR(255)")
     @NotNull

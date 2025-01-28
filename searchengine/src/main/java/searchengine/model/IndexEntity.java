@@ -20,12 +20,12 @@ public class IndexEntity {
     private int id;
 
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "page_id")
     private PageEntity pageId;
 
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "lemma_id")
     private LemmaEntity lemmaId;
     @Column(name="rankes", columnDefinition = "FLOAT")
