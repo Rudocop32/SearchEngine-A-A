@@ -34,15 +34,15 @@ public class ApiController {
     private final StatisticsService statisticsService;
     private final SearchService searchService;
     private final IndexingService indexingService;
-    private final SitesList sites;
+
     private final LemmaCounter lemmaCounter;
     private final AtomicBoolean indexingProcessing = new AtomicBoolean(false);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    public ApiController(StatisticsService statisticsService, IndexingService indexingService, SitesList sites, LemmaCounter lemmaCounter,SearchService searchService) {
+    public ApiController(StatisticsService statisticsService, IndexingService indexingService, LemmaCounter lemmaCounter,SearchService searchService) {
         this.statisticsService = statisticsService;
         this.indexingService = indexingService;
-        this.sites = sites;
+
         this.lemmaCounter = lemmaCounter;
         this.searchService = searchService;
     }
@@ -53,7 +53,7 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity startIndexing() throws InterruptedException {
+    public ResponseEntity<Object> startIndexing() throws InterruptedException {
         if(indexingProcessing.get()){
             return ResponseEntity.status(HttpStatus.CONFLICT).body(new FalseResponse("Индексация уже запущена"));
         }else {
@@ -72,7 +72,7 @@ public class ApiController {
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity stopIndexing(){
+    public ResponseEntity<Object> stopIndexing(){
         if (!indexingProcessing.get()) {
             return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(new FalseResponse("Индексация не запущена"));
         } else {
@@ -84,7 +84,7 @@ public class ApiController {
 
 
     @PostMapping("/indexPage")
-    public ResponseEntity indexPage(@RequestParam String url){
+    public ResponseEntity<Object> indexPage(@RequestParam String url){
 
         PageRepository pageRepository = lemmaCounter.getPageRepository();
         List<PageEntity> pageEntityList = pageRepository.findByPath(url);
