@@ -133,7 +133,6 @@ public class LemmaCounter {
 
     }
 
-
     public List<String> saveOnlyLemmas(String text) throws IOException {
         List<String> lemmas = new ArrayList<>();
         String[] words = text.split("\\s+");
@@ -168,21 +167,6 @@ public class LemmaCounter {
     }
 
 
-    public void saveLemmaForSite(List<PageEntity> pageEntityList) throws InterruptedException {
-
-
-        for (PageEntity pageEntity : pageEntityList) {
-            if (pageEntity.getPath().contains(".pdf") || pageEntity.getPath().contains(".jpg")) {
-                continue;
-            }
-            String url = pageEntity.getPath();
-            try {
-                saveLemmaToRepository(url);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 
     public PageRepository getPageRepository() {
         return pageRepository;

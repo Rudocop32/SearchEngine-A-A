@@ -1,5 +1,9 @@
 package searchengine.controllers;
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Connection;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +25,7 @@ import searchengine.services.StatisticsService;
 
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -34,15 +39,15 @@ public class ApiController {
     private final StatisticsService statisticsService;
     private final SearchService searchService;
     private final IndexingService indexingService;
-
+    private final SitesList sitesList;
     private final LemmaCounter lemmaCounter;
     private final AtomicBoolean indexingProcessing = new AtomicBoolean(false);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
-    public ApiController(StatisticsService statisticsService, IndexingService indexingService, LemmaCounter lemmaCounter,SearchService searchService) {
+    public ApiController(StatisticsService statisticsService,SitesList sitesList, IndexingService indexingService, LemmaCounter lemmaCounter,SearchService searchService) {
         this.statisticsService = statisticsService;
         this.indexingService = indexingService;
-
+        this.sitesList = sitesList;
         this.lemmaCounter = lemmaCounter;
         this.searchService = searchService;
     }
@@ -84,35 +89,38 @@ public class ApiController {
 
 
     @PostMapping("/indexPage")
-    public ResponseEntity<Object> indexPage(@RequestParam String url){
+    public ResponseEntity<Object> indexPage(@RequestParam String url) throws IOException, InterruptedException {
 
-        PageRepository pageRepository = lemmaCounter.getPageRepository();
-        List<PageEntity> pageEntityList = pageRepository.findByPath(url);
         List<SiteEntity> siteEntityList = indexingService.getSiteRepository().findAll();
-        try {
-            for(SiteEntity siteEntity : siteEntityList){
-                if(url.equals(siteEntity.getUrl())){
+        for(SiteEntity siteEntity : siteEntityList){
 
-                    List<PageEntity> pageEntitiesFromSite = pageRepository.findBySiteId(siteEntity);
-                    lemmaCounter.saveLemmaForSite(pageEntitiesFromSite);
-                    return ResponseEntity.status(HttpStatus.OK).body( new TrueResponse());
+            if(url.contains(siteEntity.getUrl())){
+                Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
+                Elements elements = doc.select("a[href]");
+                Connection.Response response = Jsoup.connect(url).execute();
+
+
+                
+                PageEntity pageEntity = new PageEntity();
+                pageEntity.setSiteId(siteEntity);
+                pageEntity.setPath(url);
+                pageEntity.setCode(response.statusCode());
+                pageEntity.setContent(doc.toString());
+                try{
+                    lemmaCounter.getPageRepository().save(pageEntity);
+                    lemmaCounter.saveLemmaToRepository(pageEntity.getPath());
+                }
+                catch (Exception e){
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Кодировка сайта не подходит"));
+
                 }
 
-
-            }
-              if (!pageEntityList.isEmpty()   ) {
-
-                lemmaCounter.saveLemmaToRepository(url);
                 return ResponseEntity.status(HttpStatus.OK).body( new TrueResponse());
-            }else {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Данная страница находится за пределами сайтов указанных в конфигурационном файле"));
             }
-        }catch (IOException e){
-            e.fillInStackTrace();
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+
         }
-        return ResponseEntity.status(HttpStatus.OK).body( new TrueResponse());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Данная страница находится за пределами сайтов указанных в конфигурационном файле"));
+
 
     }
 

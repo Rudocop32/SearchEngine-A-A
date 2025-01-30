@@ -43,6 +43,7 @@ public class IndexingService {
     private final ForkJoinPool forkJoinPool;
 
 
+
     public IndexingService(SiteRepository siteRepository, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
