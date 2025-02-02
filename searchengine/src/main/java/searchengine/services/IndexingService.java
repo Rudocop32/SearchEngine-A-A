@@ -43,7 +43,6 @@ public class IndexingService {
     private final ForkJoinPool forkJoinPool;
 
 
-
     public IndexingService(SiteRepository siteRepository, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
@@ -117,7 +116,7 @@ public class IndexingService {
                 inputLinks.put(siteEntity.getUrl(), false);
                 try {
                     LemmaCounter lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
-                    PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity,indexingProcessing, lemmaCounter);
+                    PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity, indexingProcessing, lemmaCounter);
 
                     ArrayList<PageEntity> pages = forkJoinPool.invoke(pageIndexing);
 
@@ -148,10 +147,10 @@ public class IndexingService {
         for (Thread thread : indexingThreadList) {
             thread.join();
         }
-        if(!indexingProcessing.get()){
+        if (!indexingProcessing.get()) {
             for (SiteEntity indexedSite : siteRepository.findAll()) {
 
-                if(indexedSite.getStatusType().equals(Status.INDEXED)){
+                if (indexedSite.getStatusType().equals(Status.INDEXED)) {
                     continue;
                 }
                 indexedSite.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));

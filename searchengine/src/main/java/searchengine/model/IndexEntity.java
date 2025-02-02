@@ -28,7 +28,7 @@ public class IndexEntity {
     @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "lemma_id")
     private LemmaEntity lemmaId;
-    @Column(name="rankes", columnDefinition = "FLOAT")
+    @Column(name = "rankes", columnDefinition = "FLOAT")
     @NotNull
     private Float rank;
 

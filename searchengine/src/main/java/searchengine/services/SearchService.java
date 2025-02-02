@@ -30,8 +30,6 @@ public class SearchService {
 
     private final SiteRepository siteRepository;
 
-    private Map<String, Integer> sortedLemma;
-
     private final LemmaCounter lemmaCounter;
 
     private final PageResponseTrue pageResponseTrue;
@@ -83,7 +81,7 @@ public class SearchService {
 
     public Map<String, Integer> sortLemmaByFrequency(String inputText) throws IOException {
         List<String> lemmaList = lemmaCounter.saveOnlyLemmas(inputText);
-        sortedLemma = new HashMap<>();
+        Map<String, Integer> sortedLemma = new HashMap<>();
         for (String lemma : lemmaList) {
 
             List<LemmaEntity> lemmaEntityList = lemmaRepository.findByLemma(lemma);
@@ -124,8 +122,7 @@ public class SearchService {
 
                 for (IndexEntity indexEntity : indexEntityList) {
 
-                    PageEntity pageEntity = new PageEntity();
-                    pageEntity = indexEntity.getPageId();
+                    PageEntity pageEntity = indexEntity.getPageId();
                     if (!(siteUrl == null)) {
                         if (!pageEntity.getSiteId().getUrl().equals(siteUrl)) {
                             continue;
@@ -184,7 +181,7 @@ public class SearchService {
         StringBuilder stringBuilder = new StringBuilder();
         String lemma = lemmaEntity.getLemma();
         String[] words = text.split("\\s+");
-        String[] lemmas = new String[words.length];
+
         String regex = "[^а-яА-я]";
 
         int lemmaNumber = 0;
@@ -207,7 +204,7 @@ public class SearchService {
 
         for (int i = Math.max(lemmaNumber - 5, 0); i < Math.min(lemmaNumber + 5, words.length); i++) {
             if (i == lemmaNumber) {
-                stringBuilder.append("<b>" + words[i] + "</b>" + " ");
+                stringBuilder.append("<b>").append(words[i]).append("</b>").append(" ");
                 continue;
             }
             boolean wordIsLemma = false;

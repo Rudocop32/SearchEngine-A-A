@@ -99,8 +99,6 @@ public class ApiController {
                 Elements elements = doc.select("a[href]");
                 Connection.Response response = Jsoup.connect(url).execute();
 
-
-                
                 PageEntity pageEntity = new PageEntity();
                 pageEntity.setSiteId(siteEntity);
                 pageEntity.setPath(url);

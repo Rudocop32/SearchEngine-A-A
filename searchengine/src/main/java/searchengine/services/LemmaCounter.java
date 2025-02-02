@@ -59,7 +59,6 @@ public class LemmaCounter {
             if (lemmaInRepository.isEmpty()) {
 
 
-
                 lemmaEntity.setLemma(lemma);
                 lemmaEntity.setSiteId(pageEntity);
                 lemmaEntity.setFrequency(frequency);
@@ -77,7 +76,7 @@ public class LemmaCounter {
                     lemmaRepository.save(lemmaEntity);
                 }
 
-            } else if( !(lemmaInRepository.get(0).getSiteId().getId() ==  pageEntity.getId()))    {
+            } else if (!(lemmaInRepository.get(0).getSiteId().getId() == pageEntity.getId())) {
                 lemmaEntity.setLemma(lemma);
                 lemmaEntity.setSiteId(pageEntity);
                 lemmaEntity.setFrequency(frequency);
@@ -95,7 +94,6 @@ public class LemmaCounter {
                     indexRepository.save(indexEntity);
 
                 }
-
 
 
             }
@@ -167,7 +165,6 @@ public class LemmaCounter {
         return pageRepository.findByPath(url).get(0).getContent();
 
     }
-
 
 
     public PageRepository getPageRepository() {

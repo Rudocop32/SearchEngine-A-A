@@ -68,7 +68,6 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     @Override
     protected ArrayList<PageEntity> compute() {
 
-
         ArrayList<PageEntity> resultLinks = new ArrayList<>();
 
         if (!indexingProcessing.get()) {
@@ -80,7 +79,6 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
         }
 
         try {
-
 
             Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
 
@@ -136,7 +134,6 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
                     if (!lookedLinks.containsKey(link) && indexingProcessing.get()) {
                         lookedLinks.put(link, false);
-
 
                         resultLinks.add(pageEntity);
                         PageIndexing pageIndexing = new PageIndexing(siteRepository, lookedLinks, link, this.mainUrl, level + 1, siteEntity,/*pageEntity,*/indexingProcessing, lemmaCounter);
