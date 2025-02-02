@@ -90,10 +90,10 @@ public class SearchService {
 
             if (!lemmaEntityList.isEmpty()) {
                 LemmaEntity lemmaEntity = lemmaEntityList.get(0);
-                SiteEntity siteEntity = lemmaEntity.getSiteId();
+                PageEntity pageEntity = lemmaEntity.getSiteId();
                 int frequency = lemmaEntity.getFrequency();
 
-                if (isGoodLemma(frequency, lemmaRepository.countBySiteId(siteEntity))) {
+                if (isGoodLemma(frequency, lemmaRepository.countBySiteId(pageEntity))) {
                     sortedLemma.put(lemma, frequency);
                 }
             }
@@ -114,55 +114,50 @@ public class SearchService {
             String lemma = entry.getKey();
 
             List<LemmaEntity> lemmaEntityList = lemmaRepository.findByLemma(lemma);
-
-            LemmaEntity lemmaEntity = lemmaEntityList.get(0);
-
-            List<IndexEntity> indexEntityList = indexRepository.findByLemmaId(lemmaEntity);
-
-            pageResponseTrue.setCount(pageResponseTrue.getCount() + indexEntityList.size());
+            for (LemmaEntity lemmaEntity : lemmaEntityList) {
 
 
-            for (IndexEntity indexEntity : indexEntityList) {
-//                Runnable pageSaving = () -> {
-                PageEntity pageEntity = new PageEntity();
-                pageEntity = indexEntity.getPageId();
-                if (!(siteUrl == null)) {
-                    if (!pageEntity.getSiteId().getUrl().equals(siteUrl)) {
-                        continue;
+                List<IndexEntity> indexEntityList = indexRepository.findByLemmaId(lemmaEntity);
+
+                pageResponseTrue.setCount(pageResponseTrue.getCount() + indexEntityList.size());
+
+
+                for (IndexEntity indexEntity : indexEntityList) {
+
+                    PageEntity pageEntity = new PageEntity();
+                    pageEntity = indexEntity.getPageId();
+                    if (!(siteUrl == null)) {
+                        if (!pageEntity.getSiteId().getUrl().equals(siteUrl)) {
+                            continue;
+                        }
                     }
+
+
+                    if (!pageEntityList.contains(pageEntity)) {
+                        String tittle = null;
+                        try {
+                            tittle = getTittle(pageEntity.getPath());
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+
+                        String site = pageEntity.getSiteId().getUrl();
+                        String siteName = pageEntity.getSiteId().getName();
+                        String url = pageEntity.getPath().replace(site, "");
+                        String snippet = generateSnippet(pageEntity, lemmaEntity, sortedLemma);
+                        double relevance = (double) pageRelevance(pageEntity);
+
+                        PageData pageData = new PageData(site, siteName, url, tittle, snippet, relevance);
+
+                        pageDataList.add(pageData);
+                        pageEntityList.add(pageEntity);
+                    }
+
+
                 }
 
 
-                if (!pageEntityList.contains(pageEntity)) {
-                    String tittle = null;
-                    try {
-                        tittle = getTittle(pageEntity.getPath());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    String site = pageEntity.getSiteId().getUrl();
-                    String siteName = pageEntity.getSiteId().getName();
-                    String url = pageEntity.getPath().replace(site, "");
-                    String snippet = generateSnippet(pageEntity, lemmaEntity, sortedLemma);
-                    double relevance = (double) pageRelevance(pageEntity);
-
-                    PageData pageData = new PageData(site, siteName, url, tittle, snippet, relevance);
-
-                    pageDataList.add(pageData);
-                    pageEntityList.add(pageEntity);
-                }
-
-
-//                };
-//                Thread thread = new Thread(pageSaving);
-//                threadList.add(thread);
-//                thread.start();
             }
-//            for(Thread thread : threadList){
-//                thread.join();
-//            }
-
 
         }
         return pageDataList;

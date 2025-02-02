@@ -72,6 +72,10 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
         ArrayList<PageEntity> resultLinks = new ArrayList<>();
 
         if (!indexingProcessing.get()) {
+            siteEntity.setStatusType(Status.FAILED);
+            siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            siteEntity.setLastError("«Индексация остановлена пользователем");
+            siteRepository.save(siteEntity);
             return resultLinks;
         }
 
@@ -85,6 +89,10 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
 
             if (!indexingProcessing.get()) {
+                siteEntity.setStatusType(Status.FAILED);
+                siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+                siteEntity.setLastError("«Индексация остановлена пользователем");
+                siteRepository.save(siteEntity);
                 return resultLinks;
             }
 
@@ -102,7 +110,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
             if (lemmaCounter.getPageRepository().exists(example)) {
                 pageEntity = lemmaCounter.getPageRepository().findByPath(pageEntity.getPath()).get(0);
                 lemmaCounter.getPageRepository().save(pageEntity);
-                //lemmaCounter.saveLemmaToRepository(pageEntity.getPath());
+                lemmaCounter.saveLemmaToRepository(pageEntity.getPath());
             } else {
                 try {
                     lemmaCounter.getPageRepository().save(pageEntity);
@@ -135,6 +143,10 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
                         parsers.add(pageIndexing);
                         pageIndexing.fork();
                     } else if (!indexingProcessing.get()) {
+                        siteEntity.setStatusType(Status.FAILED);
+                        siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+                        siteEntity.setLastError("«Индексация остановлена пользователем");
+                        siteRepository.save(siteEntity);
                         return resultLinks;
                     }
 
@@ -145,20 +157,34 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
 
             for (PageIndexing pageIndexing : parsers) {
                 if (!indexingProcessing.get()) {
+                    siteEntity.setStatusType(Status.FAILED);
+                    siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+                    siteEntity.setLastError("«Индексация остановлена пользователем");
+                    siteRepository.save(siteEntity);
                     return resultLinks;
                 }
                 ArrayList<PageEntity> childLinks = pageIndexing.join();//pageIndexing.compute();
                 for (PageEntity child : childLinks) {
                     if (!indexingProcessing.get()) {
+                        siteEntity.setStatusType(Status.FAILED);
+                        siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+                        siteEntity.setLastError("«Индексация остановлена пользователем");
+                        siteRepository.save(siteEntity);
                         return resultLinks;
                     }
                     resultLinks.add(child);
                 }
+
             }
+            siteEntity.setStatusType(Status.INDEXED);
+            siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            siteRepository.save(siteEntity);
 
         } catch (IOException | JpaSystemException | DataIntegrityViolationException e) {
 
             return resultLinks;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
         return resultLinks;

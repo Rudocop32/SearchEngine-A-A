@@ -21,7 +21,7 @@ public class LemmaEntity {
 
     @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "site_id")
-    private SiteEntity siteId;
+    private PageEntity siteId;
     @Column(name = "lemma", columnDefinition = "VARCHAR(255)")
     @NotNull
     private String lemma;
@@ -53,8 +53,13 @@ public class LemmaEntity {
         this.id = id;
     }
 
+    public PageEntity getSiteId() {
+        return siteId;
+    }
 
-
+    public void setSiteId(PageEntity siteId) {
+        this.siteId = siteId;
+    }
 
     public String getLemma() {
         return lemma;
@@ -72,11 +77,5 @@ public class LemmaEntity {
         this.frequency = frequency;
     }
 
-    public SiteEntity getSiteId() {
-        return siteId;
-    }
 
-    public void setSiteId(SiteEntity siteId) {
-        this.siteId = siteId;
-    }
 }

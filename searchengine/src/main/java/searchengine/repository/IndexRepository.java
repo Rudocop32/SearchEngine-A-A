@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface IndexRepository extends JpaRepository<IndexEntity,Integer> {
 
-
+    int countByPageId(PageEntity pageEntity);
     List<IndexEntity> findByLemmaId(LemmaEntity lemmaEntity);
 
     List<IndexEntity> findByPageId(PageEntity pageEntity);

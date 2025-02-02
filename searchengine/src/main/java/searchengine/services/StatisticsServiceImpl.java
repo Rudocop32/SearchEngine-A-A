@@ -10,6 +10,7 @@ import searchengine.dto.statistics.TotalStatistics;
 import searchengine.model.LemmaEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
+import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
@@ -29,13 +30,14 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final SitesList sites;
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
-    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
 
-    public StatisticsServiceImpl(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, LemmaRepository lemmaRepository) {
+
+    public StatisticsServiceImpl(SitesList sites, SiteRepository siteRepository, PageRepository pageRepository, IndexRepository indexRepository) {
         this.sites = sites;
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
-        this.lemmaRepository = lemmaRepository;
+        this.indexRepository = indexRepository;
     }
 
     @Override
@@ -62,7 +64,13 @@ public class StatisticsServiceImpl implements StatisticsService {
            item.setUrl(site.getUrl());
 
            int pages = pageRepository.countBySiteId(siteEntity);
-           int lemmas = lemmaRepository.countBySiteId(siteEntity);
+           int lemmas = 0;
+           List<PageEntity> pageEntityList = pageRepository.findBySiteId(siteEntity);
+           for(PageEntity pageEntity : pageEntityList){
+              lemmas = lemmas + indexRepository.countByPageId(pageEntity);
+
+           }
+
            item.setPages(pages);
            item.setLemmas(lemmas);
            item.setStatus(siteEntity.getStatusType().toString());

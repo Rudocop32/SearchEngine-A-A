@@ -148,16 +148,19 @@ public class IndexingService {
         for (Thread thread : indexingThreadList) {
             thread.join();
         }
-        List<SiteEntity> indexedSiteList = new ArrayList<>();
-        for (SiteEntity indexedSite : siteRepository.findAll()) {
+        if(!indexingProcessing.get()){
+            for (SiteEntity indexedSite : siteRepository.findAll()) {
 
-
-            indexedSite.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
-            indexedSite.setStatusType(Status.INDEXED);
-            siteRepository.save(indexedSite);
-
-
+                if(indexedSite.getStatusType().equals(Status.INDEXED)){
+                    continue;
+                }
+                indexedSite.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+                indexedSite.setStatusType(Status.FAILED);
+                siteRepository.save(indexedSite);
+            }
         }
+
+
         indexingProcessing.set(false);
         System.out.println("INDEXING FINISHED!!!!!!!!!!!!");
 

@@ -46,7 +46,7 @@ public class LemmaCounter {
         List<PageEntity> pageEntityList = pageRepository.findByPath(url);
 
         for (Map.Entry<String, Integer> entry : lemmaInPage.entrySet()) {
-
+            int frequency = entry.getValue();
             String lemma = entry.getKey();
             Integer lemmaCountInPage = entry.getValue();
             IndexEntity indexEntity = new IndexEntity();
@@ -59,10 +59,10 @@ public class LemmaCounter {
             if (lemmaInRepository.isEmpty()) {
 
 
-                SiteEntity siteEntity = pageEntity.getSiteId();
+
                 lemmaEntity.setLemma(lemma);
-                lemmaEntity.setSiteId(siteEntity);
-                lemmaEntity.setFrequency(1);
+                lemmaEntity.setSiteId(pageEntity);
+                lemmaEntity.setFrequency(frequency);
 
                 indexEntity.setLemmaId(lemmaEntity);
                 indexEntity.setPageId(pageEntity);
@@ -77,9 +77,12 @@ public class LemmaCounter {
                     lemmaRepository.save(lemmaEntity);
                 }
 
-            } else if (lemmaInRepository.get(0).getSiteId().equals(pageEntity.getSiteId())) {
-                lemmaEntity = lemmaInRepository.get(0);
-                lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
+            } else if( !(lemmaInRepository.get(0).getSiteId().getId() ==  pageEntity.getId()))    {
+                lemmaEntity.setLemma(lemma);
+                lemmaEntity.setSiteId(pageEntity);
+                lemmaEntity.setFrequency(frequency);
+                lemmaRepository.save(lemmaEntity);
+
 
                 indexEntity.setLemmaId(lemmaEntity);
                 indexEntity.setPageId(pageEntity);
@@ -94,7 +97,6 @@ public class LemmaCounter {
                 }
 
 
-                lemmaRepository.save(lemmaEntity);
 
             }
 
