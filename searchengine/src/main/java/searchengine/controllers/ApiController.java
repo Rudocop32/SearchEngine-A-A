@@ -98,7 +98,6 @@ public class ApiController {
                 Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
                 Elements elements = doc.select("a[href]");
                 Connection.Response response = Jsoup.connect(url).execute();
-
                 PageEntity pageEntity = new PageEntity();
                 pageEntity.setSiteId(siteEntity);
                 pageEntity.setPath(url);
@@ -110,12 +109,10 @@ public class ApiController {
                 }
                 catch (Exception e){
                     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Кодировка сайта не подходит"));
-
                 }
 
                 return ResponseEntity.status(HttpStatus.OK).body( new TrueResponse());
             }
-
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Данная страница находится за пределами сайтов указанных в конфигурационном файле"));
 
@@ -127,7 +124,7 @@ public class ApiController {
     public ResponseEntity<Object> search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String site,
-            @RequestParam(required = false, defaultValue = "0") Integer offset,
+            @RequestParam(required = false, defaultValue = "4") Integer offset,
             @RequestParam(required = false, defaultValue = "20") Integer limit
     ) throws IOException, InterruptedException {
         if (query == null || query.isBlank()) {

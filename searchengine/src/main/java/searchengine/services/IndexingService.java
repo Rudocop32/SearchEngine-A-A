@@ -111,7 +111,7 @@ public class IndexingService {
             Runnable siteIndexing = () -> {
                 ConcurrentHashMap<String, Boolean> inputLinks = new ConcurrentHashMap<>();
 
-                PageEntity pageEntity = new PageEntity();
+
 
                 inputLinks.put(siteEntity.getUrl(), false);
                 try {

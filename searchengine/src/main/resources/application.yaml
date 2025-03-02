@@ -4,8 +4,8 @@ indexing-settings:
   sites:
     - url: https://kuzovsibir.ru/
       name: Кузовсиб
-    - url: https://ds18nsk.edusite.ru/
-      name: Школа
+    - url: https://lenta.ru/
+      name: Lenta-ru
     - url: https://playback.ru/
       name: PlayBack
 server:
@@ -21,5 +21,5 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
