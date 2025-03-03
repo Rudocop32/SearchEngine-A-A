@@ -22,9 +22,7 @@ import java.util.*;
 
 @Service
 public class SearchService {
-
     private final LemmaRepository lemmaRepository;
-
     private final PageRepository pageRepository;
     private final IndexRepository indexRepository;
 
@@ -45,13 +43,17 @@ public class SearchService {
         luceneMorphology = new RussianLuceneMorphology();
     }
     public ResponseEntity<Object> search(String query, String site, int offset, int limit) throws IOException {
+        if(offset >0){
+            offset/=limit;
+        }
         Map<String, Integer> sortedLemma = sortLemmaByFrequency(query);
         List<PageData> pageDataList = findPagesFromOneLemma(sortedLemma, site);
         if(sortedLemma.size()>1){
             pageDataList = findPagesFromMoreLemma(sortedLemma,site);
         }
         List<PageData> result = new ArrayList<>();
-        for (int i = limit * offset; i <= limit * offset + limit; i++) {
+
+        for (int i = limit * offset; i < limit * offset + limit; i++) {
             try {
                 result.add(pageDataList.get(i));
             } catch (IndexOutOfBoundsException ex) {
@@ -68,7 +70,6 @@ public class SearchService {
         pageResponseTrue.setData(result);
         return ResponseEntity.ok(pageResponseTrue);
     }
-
     public Map<String, Integer> sortLemmaByFrequency(String inputText) throws IOException {
         List<String> lemmaList = lemmaCounter.saveOnlyLemmas(inputText);
         Map<String, Integer> sortedLemma = new HashMap<>();
@@ -85,7 +86,6 @@ public class SearchService {
         }
         return sortedLemma;
     }
-
     public List<PageData> findPagesFromOneLemma(Map<String, Integer> sortedLemma, String siteUrl) {
         List<PageEntity> pageEntityList = new ArrayList<>();
         List<PageData> pageDataList = new ArrayList<>();

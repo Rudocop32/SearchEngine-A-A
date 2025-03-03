@@ -124,14 +124,12 @@ public class ApiController {
     public ResponseEntity<Object> search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String site,
-            @RequestParam(required = false, defaultValue = "4") Integer offset,
-            @RequestParam(required = false, defaultValue = "20") Integer limit
+            @RequestParam(required = false, defaultValue = "0") Integer offset,
+            @RequestParam(required = false, defaultValue = "10") Integer limit
     ) throws IOException, InterruptedException {
         if (query == null || query.isBlank()) {
             return ResponseEntity.badRequest().body(new FalseResponse("Задан пустой поисковой запрос"));
         }
         return searchService.search(query,site,offset,limit);
     }
-
-
 }
