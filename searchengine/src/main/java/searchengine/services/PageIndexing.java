@@ -75,7 +75,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
                     stopIndexing();
                     return resultLinks;
                 }
-                if (link.contains(mainUrl) && !link.contains("#") && !link.contains(".pdf") && !link.contains(".jpg") && !lookedLinks.containsKey(link) && indexingProcessing.get()) {
+                if (link.contains(mainUrl) && !link.contains("#") && !link.contains(".pdf") && !link.contains(".JPG") &&!link.contains(".jpg") && !lookedLinks.containsKey(link) && indexingProcessing.get()) {
                     forkIfLinkIsNew(link,resultLinks,pageEntity,parsers);
                 }
             }
@@ -85,15 +85,11 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
                     return resultLinks;
                 }
                 ArrayList<PageEntity> childLinks = pageIndexing.join();
-                for (PageEntity child : childLinks) {
-                    resultLinks.add(child);
-                }
+                resultLinks.addAll(childLinks);
             }
             setSiteIsIndexedAndSave();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+        } catch (IOException | InterruptedException e) {
+            e.fillInStackTrace();
         }
         return resultLinks;
     }

@@ -6,6 +6,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -16,6 +18,8 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.response.FalseResponse;
+import searchengine.response.TrueResponse;
 
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -42,17 +46,16 @@ public class IndexingService {
     private AtomicBoolean indexingProcessing;
     private final ForkJoinPool forkJoinPool;
 
-
-    public IndexingService(SiteRepository siteRepository, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) {
+    private final LemmaCounter lemmaCounter;
+    public IndexingService(SiteRepository siteRepository, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.sitesList = sitesList;
         this.siteEntityList = siteEntityList;
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
-
+        lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
         forkJoinPool = new ForkJoinPool();
-
     }
 
     public void startPageIndexing(AtomicBoolean indexingProcessing) throws InterruptedException {
@@ -67,7 +70,6 @@ public class IndexingService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
     }
 
 
@@ -92,6 +94,31 @@ public class IndexingService {
         }
     }
 
+    public ResponseEntity<Object> indexPage(String url) throws IOException {
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
+        LemmaCounter lemmaCounter = new LemmaCounter(pageRepository,lemmaRepository,indexRepository);
+        for(SiteEntity siteEntity : siteEntityList){
+            if(url.contains(siteEntity.getUrl())){
+                Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
+                Connection.Response response = Jsoup.connect(url).execute();
+                PageEntity pageEntity = new PageEntity();
+                pageEntity.setSiteId(siteEntity);
+                pageEntity.setPath(url);
+                pageEntity.setCode(response.statusCode());
+                pageEntity.setContent(doc.toString());
+                try{
+                    lemmaCounter.getPageRepository().save(pageEntity);
+                    lemmaCounter.saveLemmaToRepository(pageEntity.getPath());
+                }
+                catch (Exception e){
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Кодировка сайта не подходит"));
+                }
+                return ResponseEntity.status(HttpStatus.OK).body( new TrueResponse());
+            }
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new FalseResponse("Данная страница находится за пределами сайтов указанных в конфигурационном файле"));
+    }
+
     public void refreshPage(PageEntity pageEntity, String url) {
         try {
             LemmaCounter lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
@@ -105,22 +132,15 @@ public class IndexingService {
 
     private void indexAllPages() throws InterruptedException, IOException {
         siteEntityList.addAll(siteRepository.findAll());
-
-        List<Thread> indexingThreadList = new ArrayList<>();
+        List<PageIndexing> pageIndexingList = new ArrayList<>();
         for (SiteEntity siteEntity : siteEntityList) {
-            Runnable siteIndexing = () -> {
                 ConcurrentHashMap<String, Boolean> inputLinks = new ConcurrentHashMap<>();
-
-
-
                 inputLinks.put(siteEntity.getUrl(), false);
                 try {
                     LemmaCounter lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
                     PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity, indexingProcessing, lemmaCounter);
-
+                    pageIndexingList.add(pageIndexing);
                     ArrayList<PageEntity> pages = forkJoinPool.invoke(pageIndexing);
-
-
                 } catch (SecurityException ex) {
                     SiteEntity sitePage = siteRepository.findById(siteEntity.getId()).get();
                     sitePage.setStatusType(Status.FAILED);
@@ -135,17 +155,12 @@ public class IndexingService {
                     sitePage.setLastError("Indexing stopped by user");
                     siteRepository.save(sitePage);
                 }
-
-
-            };
-
-
-            Thread thread = new Thread(siteIndexing);
-            indexingThreadList.add(thread);
-            thread.start();
         }
-        for (Thread thread : indexingThreadList) {
-            thread.join();
+        for (PageIndexing pageIndexing : pageIndexingList) {
+            if(!indexingProcessing.get()){
+                break;
+            }
+            pageIndexing.join();
         }
         if (!indexingProcessing.get()) {
             for (SiteEntity indexedSite : siteRepository.findAll()) {

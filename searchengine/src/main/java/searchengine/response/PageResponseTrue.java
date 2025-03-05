@@ -1,12 +1,9 @@
 package searchengine.response;
 
-import lombok.Data;
 import searchengine.dto.statistics.PageData;
 
 import java.util.List;
 
-
-@Data
 public class PageResponseTrue {
 
     private boolean result;

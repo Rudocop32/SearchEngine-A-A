@@ -2,12 +2,12 @@
 
 indexing-settings:
   sites:
-    - url: https://kuzovsibir.ru/
-      name: Кузовсиб
-    - url: https://lenta.ru/
-      name: Lenta-ru
+    - url: http://www.sto-m52.ru
+      name: СТО
     - url: https://playback.ru/
       name: PlayBack
+    - url: https://s-102.edusite.ru/
+      name: Школа
 server:
   port: 8080
 

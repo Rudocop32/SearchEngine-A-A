@@ -12,13 +12,10 @@ import java.util.*;
 @Entity
 @Table(name = "lemma")
 public class LemmaEntity {
-
     @Id
     @Column(name = "id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
-
-
     @ManyToOne(cascade = CascadeType.MERGE)
     @JoinColumn(name = "site_id")
     private PageEntity siteId;
@@ -26,25 +23,20 @@ public class LemmaEntity {
     @NotNull
     private String lemma;
 
-
     @Column(name = "frequency")
     @NotNull
     private int frequency;
-
 
     @OneToMany
     @JoinColumn(name = "lemma_id", referencedColumnName = "id")
     List<IndexEntity> indexEntityList = new ArrayList<>();
 
-
     public List<IndexEntity> getIndexEntityList() {
         return indexEntityList;
     }
-
     public void setIndexEntityList(List<IndexEntity> indexEntityList) {
         this.indexEntityList = indexEntityList;
     }
-
     public int getId() {
         return id;
     }

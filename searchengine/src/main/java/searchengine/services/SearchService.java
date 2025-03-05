@@ -26,18 +26,17 @@ public class SearchService {
     private final PageRepository pageRepository;
     private final IndexRepository indexRepository;
 
-    private final SiteRepository siteRepository;
+
 
     private final LemmaCounter lemmaCounter;
 
     private final PageResponseTrue pageResponseTrue;
     private final LuceneMorphology luceneMorphology;
 
-    public SearchService(LemmaRepository lemmaRepository, PageRepository pageRepository, IndexRepository indexRepository, SiteRepository siteRepository) throws IOException {
+    public SearchService(LemmaRepository lemmaRepository, PageRepository pageRepository, IndexRepository indexRepository) throws IOException {
         this.lemmaRepository = lemmaRepository;
         this.pageRepository = pageRepository;
         this.indexRepository = indexRepository;
-        this.siteRepository = siteRepository;
         lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
         pageResponseTrue = new PageResponseTrue();
         luceneMorphology = new RussianLuceneMorphology();
@@ -46,11 +45,9 @@ public class SearchService {
         if(offset >0){
             offset/=limit;
         }
-        Map<String, Integer> sortedLemma = sortLemmaByFrequency(query);
-        List<PageData> pageDataList = findPagesFromOneLemma(sortedLemma, site);
-        if(sortedLemma.size()>1){
-            pageDataList = findPagesFromMoreLemma(sortedLemma,site);
-        }
+        List<String> lemmaList = lemmaCounter.saveOnlyLemmas(query);
+        List<PageData> pageDataList = findPagesFromOneLemma(lemmaList, site);
+
         List<PageData> result = new ArrayList<>();
 
         for (int i = limit * offset; i < limit * offset + limit; i++) {
@@ -70,68 +67,35 @@ public class SearchService {
         pageResponseTrue.setData(result);
         return ResponseEntity.ok(pageResponseTrue);
     }
-    public Map<String, Integer> sortLemmaByFrequency(String inputText) throws IOException {
-        List<String> lemmaList = lemmaCounter.saveOnlyLemmas(inputText);
-        Map<String, Integer> sortedLemma = new HashMap<>();
-        for (String lemma : lemmaList) {
-            List<LemmaEntity> lemmaEntityList = lemmaRepository.findByLemma(lemma);
-            if (!lemmaEntityList.isEmpty()) {
-                LemmaEntity lemmaEntity = lemmaEntityList.get(0);
-                PageEntity pageEntity = lemmaEntity.getSiteId();
-                int frequency = lemmaEntity.getFrequency();
-                if (isGoodLemma(frequency, lemmaRepository.countBySiteId(pageEntity))) {
-                    sortedLemma.put(lemma, frequency);
-                }
-            }
-        }
-        return sortedLemma;
-    }
-    public List<PageData> findPagesFromOneLemma(Map<String, Integer> sortedLemma, String siteUrl) {
+    public List<PageData> findPagesFromOneLemma(List<String> lemmaList, String siteUrl) {
         List<PageEntity> pageEntityList = new ArrayList<>();
         List<PageData> pageDataList = new ArrayList<>();
         pageResponseTrue.setCount(0);
-        for (Map.Entry<String, Integer> entry : sortedLemma.entrySet()) {
-            String lemma = entry.getKey();
-            List<LemmaEntity> lemmaEntityList = lemmaRepository.findByLemma(lemma);
-            for (LemmaEntity lemmaEntity : lemmaEntityList) {
-                List<IndexEntity> indexEntityList = indexRepository.findByLemmaId(lemmaEntity);
-                pageResponseTrue.setCount(pageResponseTrue.getCount() + indexEntityList.size());
-                    PageEntity pageEntity = lemmaEntity.getSiteId();
-                    if (!(siteUrl == null)) {
-                        if (!pageEntity.getSiteId().getUrl().equals(siteUrl)) {
-                            continue;
-                        }
-                    }
-                    if (!pageEntityList.contains(pageEntity)) {
-                        pageDataList.add(createPageData(pageEntity,lemmaEntity,sortedLemma));
-                        pageEntityList.add(pageEntity);
-                    }
+        List<LemmaEntity> lemmaEntityList = new ArrayList<>();
+            if(lemmaList.size() == 1){
+                String lemma = lemmaList.get(0);
+                lemmaEntityList = lemmaRepository.findByLemma(lemma);
+            }
+            else {
+                lemmaEntityList =findTheLeastLemmas(lemmaList);
+            }
+        for (LemmaEntity lemmaEntity : lemmaEntityList) {
+            List<IndexEntity> indexEntityList = indexRepository.findByLemmaId(lemmaEntity);
+            pageResponseTrue.setCount(pageResponseTrue.getCount() + indexEntityList.size());
+            PageEntity pageEntity = lemmaEntity.getSiteId();
+            if (!(siteUrl == null)) {
+                if (!pageEntity.getSiteId().getUrl().equals(siteUrl)) {
+                    continue;
+                }
+            }
+            if (!pageEntityList.contains(pageEntity)) {
+                pageDataList.add(createPageData(pageEntity,lemmaEntity,lemmaList));
+                pageEntityList.add(pageEntity);
             }
         }
         return pageDataList;
     }
-    public List<PageData> findPagesFromMoreLemma(Map<String, Integer> sortedLemma, String siteUrl) {
-        List<PageEntity> pageEntityList = new ArrayList<>();
-        List<PageData> pageDataList = new ArrayList<>();
-        pageResponseTrue.setCount(0);
-            List<LemmaEntity> lemmaEntityList =findTheLeastLemmas(sortedLemma);
-            for (LemmaEntity lemmaEntity : lemmaEntityList) {
-                List<IndexEntity> indexEntityList = indexRepository.findByLemmaId(lemmaEntity);
-                pageResponseTrue.setCount(pageResponseTrue.getCount() + indexEntityList.size());
-                PageEntity pageEntity = lemmaEntity.getSiteId();
-                if (!(siteUrl == null)) {
-                    if (!pageEntity.getSiteId().getUrl().equals(siteUrl)) {
-                        continue;
-                    }
-                }
-                if (!pageEntityList.contains(pageEntity)) {
-                    pageDataList.add(createPageData(pageEntity,lemmaEntity,sortedLemma));
-                    pageEntityList.add(pageEntity);
-                }
-            }
 
-        return pageDataList;
-    }
 
 
     public Integer getPageRelevance(PageEntity pageEntity) {
@@ -142,7 +106,7 @@ public class SearchService {
         }
         return absRevelance;
     }
-    public String generateSnippet(PageEntity pageEntity, LemmaEntity lemmaEntity, Map<String, Integer> sortedLemma) {
+    public String generateSnippet(PageEntity pageEntity, LemmaEntity lemmaEntity, List<String> lemmaList) {
         String text = Jsoup.parse(pageEntity.getContent()).text();
         String resultText;
         StringBuilder stringBuilder = new StringBuilder();
@@ -156,8 +120,8 @@ public class SearchService {
             }
             boolean wordIsLemma = false;
             try{
-                if (sortedLemma.containsKey(makeAWordNormalForm(words[i]))){
-                    stringBuilder.append("<b>" + words[i] + "</b>" + " ");
+                if (lemmaList.contains(makeAWordNormalForm(words[i]))){
+                    stringBuilder.append("<b>").append(words[i]).append("</b>").append(" ");
                     wordIsLemma = true;
                 }
             }catch (Exception e){
@@ -206,7 +170,7 @@ public class SearchService {
         checkedWord = normalFormCheckedWord.get(0);
         return checkedWord;
     }
-    private PageData createPageData(PageEntity pageEntity,LemmaEntity lemmaEntity,Map<String,Integer> sortedLemma){
+    private PageData createPageData(PageEntity pageEntity,LemmaEntity lemmaEntity,List<String> lemmaList){
         String tittle;
         try {
             tittle = getTittle(pageEntity.getPath());
@@ -216,7 +180,7 @@ public class SearchService {
         String site = pageEntity.getSiteId().getUrl();
         String siteName = pageEntity.getSiteId().getName();
         String url = pageEntity.getPath().replace(site, "");
-        String snippet = generateSnippet(pageEntity, lemmaEntity, sortedLemma);
+        String snippet = generateSnippet(pageEntity, lemmaEntity, lemmaList);
         double relevance = (double) getPageRelevance(pageEntity);
         PageData pageData = new PageData(site, siteName, url, tittle, snippet, relevance);
         return pageData;
@@ -225,10 +189,9 @@ public class SearchService {
     public boolean isGoodLemma(int frequency, int allLemmaInSite) {
         return (double) frequency / allLemmaInSite < 0.75;
     }
-    public List<LemmaEntity> findTheLeastLemmas(Map<String, Integer> sortedLemma){
+    public List<LemmaEntity> findTheLeastLemmas(List<String> sortedLemma){
         List<LemmaEntity> lemmasWithSamePage = new ArrayList<>();
-        for (Map.Entry<String, Integer> entry : sortedLemma.entrySet()){
-            String lemma = entry.getKey();
+        for (String lemma : sortedLemma){
             List<LemmaEntity> lemmaEntityList = lemmaRepository.findByLemma(lemma);
             if(lemmasWithSamePage.isEmpty()){
                 lemmasWithSamePage.addAll(lemmaEntityList);

@@ -1,9 +1,4 @@
 package searchengine.dto.statistics;
-
-
-import lombok.Data;
-
-@Data
 public class PageData {
 
     private final String site;
