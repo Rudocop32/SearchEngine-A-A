@@ -15,7 +15,6 @@ import searchengine.model.*;
 import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
-import searchengine.repository.SiteRepository;
 
 import java.io.IOException;
 import java.util.*;
@@ -26,11 +25,9 @@ public class SearchService {
     private final PageRepository pageRepository;
     private final IndexRepository indexRepository;
 
-
-
     private final LemmaCounter lemmaCounter;
 
-    private final PageResponseTrue pageResponseTrue;
+
     private final LuceneMorphology luceneMorphology;
 
     public SearchService(LemmaRepository lemmaRepository, PageRepository pageRepository, IndexRepository indexRepository) throws IOException {
@@ -38,18 +35,20 @@ public class SearchService {
         this.pageRepository = pageRepository;
         this.indexRepository = indexRepository;
         lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
-        pageResponseTrue = new PageResponseTrue();
+
         luceneMorphology = new RussianLuceneMorphology();
     }
     public ResponseEntity<Object> search(String query, String site, int offset, int limit) throws IOException {
+        PageResponseTrue pageResponseTrue = new PageResponseTrue();
         if(offset >0){
             offset/=limit;
         }
         List<String> lemmaList = lemmaCounter.saveOnlyLemmas(query);
-        List<PageData> pageDataList = findPagesFromOneLemma(lemmaList, site);
-
+        List<PageData> pageDataList = new ArrayList<>();
+        if(pageDataList.isEmpty()){
+            pageDataList = findPagesFromLemma(lemmaList, site);
+        }
         List<PageData> result = new ArrayList<>();
-
         for (int i = limit * offset; i < limit * offset + limit; i++) {
             try {
                 result.add(pageDataList.get(i));
@@ -67,7 +66,8 @@ public class SearchService {
         pageResponseTrue.setData(result);
         return ResponseEntity.ok(pageResponseTrue);
     }
-    public List<PageData> findPagesFromOneLemma(List<String> lemmaList, String siteUrl) {
+    public List<PageData> findPagesFromLemma(List<String> lemmaList, String siteUrl) {
+        PageResponseTrue pageResponseTrue = new PageResponseTrue();
         List<PageEntity> pageEntityList = new ArrayList<>();
         List<PageData> pageDataList = new ArrayList<>();
         pageResponseTrue.setCount(0);
