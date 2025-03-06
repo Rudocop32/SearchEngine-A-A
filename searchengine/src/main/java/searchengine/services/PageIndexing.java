@@ -38,17 +38,16 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     private final SiteRepository siteRepository;
     private final ConcurrentHashMap<String, Boolean> lookedLinks;
     private final String url;
-    private final String mainUrl;
+
     private final int level;
     private final SiteEntity siteEntity;
     private final AtomicBoolean indexingProcessing;
     private final LemmaCounter lemmaCounter;
 
-    public PageIndexing(SiteRepository siteRepository, ConcurrentHashMap<String, Boolean> lookedLinks, String url, String mainUrl, int level, SiteEntity siteEntity, AtomicBoolean indexingProcessing, LemmaCounter lemmaCounter) {
+    public PageIndexing(SiteRepository siteRepository, ConcurrentHashMap<String, Boolean> lookedLinks, String url,  int level, SiteEntity siteEntity, AtomicBoolean indexingProcessing, LemmaCounter lemmaCounter) {
         this.siteRepository = siteRepository;
         this.lookedLinks = lookedLinks;
         this.url = url;
-        this.mainUrl = mainUrl;
         this.level = level;
         this.siteEntity = siteEntity;
         this.lemmaCounter = lemmaCounter;
@@ -75,7 +74,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
                     stopIndexing();
                     return resultLinks;
                 }
-                if (link.contains(mainUrl) && !link.contains("#") && !link.contains(".pdf") && !link.contains(".JPG") &&!link.contains(".jpg") && !lookedLinks.containsKey(link) && indexingProcessing.get()) {
+                if (link.contains(siteEntity.getUrl()) && !link.contains("#") && !link.contains(".pdf") && !link.contains(".JPG") &&!link.contains(".jpg") && !lookedLinks.containsKey(link) && indexingProcessing.get()) {
                     forkIfLinkIsNew(link,resultLinks,pageEntity,parsers);
                 }
             }
@@ -138,7 +137,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     private void forkIfLinkIsNew (String link,ArrayList<PageEntity> resultLinks,PageEntity pageEntity,List<PageIndexing> parsers) {
         lookedLinks.put(link, false);
         resultLinks.add(pageEntity);
-        PageIndexing pageIndexing = new PageIndexing(siteRepository, lookedLinks, link, this.mainUrl, level + 1, siteEntity,indexingProcessing, lemmaCounter);
+        PageIndexing pageIndexing = new PageIndexing(siteRepository, lookedLinks, link, level + 1, siteEntity,indexingProcessing, lemmaCounter);
         parsers.add(pageIndexing);
         pageIndexing.fork();
     }

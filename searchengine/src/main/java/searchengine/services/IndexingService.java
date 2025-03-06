@@ -8,6 +8,7 @@ import org.jsoup.select.Elements;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
@@ -47,17 +48,19 @@ public class IndexingService {
     private final ForkJoinPool forkJoinPool;
 
     private final LemmaCounter lemmaCounter;
-    public IndexingService(SiteRepository siteRepository, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException {
+    public IndexingService(SiteRepository siteRepository,LemmaCounter lemmaCounter, PageRepository pageRepository, SitesList sitesList, List<SiteEntity> siteEntityList, LemmaRepository lemmaRepository, IndexRepository indexRepository) throws IOException {
         this.siteRepository = siteRepository;
         this.pageRepository = pageRepository;
         this.sitesList = sitesList;
         this.siteEntityList = siteEntityList;
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
-        lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
+        this.lemmaCounter = lemmaCounter;
         forkJoinPool = new ForkJoinPool();
     }
 
+
+    @Async
     public void startPageIndexing(AtomicBoolean indexingProcessing) throws InterruptedException {
         this.indexingProcessing = indexingProcessing;
         try {
@@ -96,7 +99,6 @@ public class IndexingService {
 
     public ResponseEntity<Object> indexPage(String url) throws IOException {
         List<SiteEntity> siteEntityList = siteRepository.findAll();
-        LemmaCounter lemmaCounter = new LemmaCounter(pageRepository,lemmaRepository,indexRepository);
         for(SiteEntity siteEntity : siteEntityList){
             if(url.contains(siteEntity.getUrl())){
                 Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
@@ -121,7 +123,6 @@ public class IndexingService {
 
     public void refreshPage(PageEntity pageEntity, String url) {
         try {
-            LemmaCounter lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
             lemmaCounter.saveLemmaToRepository(url);
         } catch (IOException e) {
             e.fillInStackTrace();
@@ -137,23 +138,14 @@ public class IndexingService {
                 ConcurrentHashMap<String, Boolean> inputLinks = new ConcurrentHashMap<>();
                 inputLinks.put(siteEntity.getUrl(), false);
                 try {
-                    LemmaCounter lemmaCounter = new LemmaCounter(pageRepository, lemmaRepository, indexRepository);
-                    PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), siteEntity.getUrl(), 0, siteEntity, indexingProcessing, lemmaCounter);
+                    PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), 0, siteEntity, indexingProcessing, lemmaCounter);
                     pageIndexingList.add(pageIndexing);
                     ArrayList<PageEntity> pages = forkJoinPool.invoke(pageIndexing);
                 } catch (SecurityException ex) {
-                    SiteEntity sitePage = siteRepository.findById(siteEntity.getId()).get();
-                    sitePage.setStatusType(Status.FAILED);
-                    sitePage.setLastError(ex.getMessage());
-                    siteRepository.save(sitePage);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    setSiteIfError(siteEntity);
                 }
-                if (!indexingProcessing.get()) {
-                    SiteEntity sitePage = siteRepository.findById(siteEntity.getId()).get();
-                    sitePage.setStatusType(Status.FAILED);
-                    sitePage.setLastError("Indexing stopped by user");
-                    siteRepository.save(sitePage);
+            if (!indexingProcessing.get()) {
+                    setSiteIfStopped(siteEntity);
                 }
         }
         for (PageIndexing pageIndexing : pageIndexingList) {
@@ -163,29 +155,33 @@ public class IndexingService {
             pageIndexing.join();
         }
         if (!indexingProcessing.get()) {
-            for (SiteEntity indexedSite : siteRepository.findAll()) {
-
-                if (indexedSite.getStatusType().equals(Status.INDEXED)) {
-                    continue;
-                }
-                indexedSite.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
-                indexedSite.setStatusType(Status.FAILED);
-                siteRepository.save(indexedSite);
-            }
+            setAllSiteAreIndexed();
         }
-
-
         indexingProcessing.set(false);
         System.out.println("INDEXING FINISHED!!!!!!!!!!!!");
-
     }
 
-    public SiteRepository getSiteRepository() {
-        return siteRepository;
+    private void setSiteIfError(SiteEntity siteEntity){
+        SiteEntity sitePage = siteRepository.findById(siteEntity.getId()).get();
+        sitePage.setStatusType(Status.FAILED);
+        sitePage.setLastError("Indexing stopped by user");
+        siteRepository.save(sitePage);
     }
-
-    public PageRepository getPageRepository() {
-        return pageRepository;
+    private void setSiteIfStopped(SiteEntity siteEntity){
+        SiteEntity sitePage = siteRepository.findById(siteEntity.getId()).get();
+        sitePage.setStatusType(Status.FAILED);
+        sitePage.setLastError("Indexing stopped by user");
+        siteRepository.save(sitePage);
+    }
+    private void setAllSiteAreIndexed(){
+        for (SiteEntity indexedSite : siteRepository.findAll()) {
+            if (indexedSite.getStatusType().equals(Status.INDEXED)) {
+                continue;
+            }
+            indexedSite.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
+            indexedSite.setStatusType(Status.FAILED);
+            siteRepository.save(indexedSite);
+        }
     }
 }
 

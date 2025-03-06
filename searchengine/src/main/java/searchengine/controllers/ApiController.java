@@ -38,7 +38,7 @@ public class ApiController {
     }
 
     @GetMapping("/startIndexing")
-    @Async
+
     public ResponseEntity<Object> startIndexing() throws InterruptedException {
         if(indexingProcessing.get()){
             return ResponseEntity.status(HttpStatus.CONFLICT).body(new FalseResponse("Индексация уже запущена"));
