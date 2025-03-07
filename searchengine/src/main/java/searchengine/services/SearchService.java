@@ -49,7 +49,6 @@ public class SearchService {
             List<String> lemmaList = lemmaCounter.saveOnlyLemmas(query);
             pageDataList = findPagesFromLemma(lemmaList, site);
         }
-
         List<PageData> result = new ArrayList<>();
         for (int i = limit * offset; i < limit * offset + limit; i++) {
             try {
