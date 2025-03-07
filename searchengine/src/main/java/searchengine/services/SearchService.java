@@ -26,8 +26,9 @@ public class SearchService {
     private final IndexRepository indexRepository;
 
     private final LemmaCounter lemmaCounter;
+    private  List<PageData> pageDataList = new ArrayList<>();
 
-
+    private String query;
     private final LuceneMorphology luceneMorphology;
 
     public SearchService(LemmaRepository lemmaRepository, PageRepository pageRepository, IndexRepository indexRepository) throws IOException {
@@ -43,8 +44,11 @@ public class SearchService {
         if(offset >0){
             offset/=limit;
         }
-        List<String> lemmaList = lemmaCounter.saveOnlyLemmas(query);
-        List<PageData> pageDataList =findPagesFromLemma(lemmaList, site);
+        if(checkQueryIsNew(query)){
+            this.query = query;
+            List<String> lemmaList = lemmaCounter.saveOnlyLemmas(query);
+            pageDataList = findPagesFromLemma(lemmaList, site);
+        }
 
         List<PageData> result = new ArrayList<>();
         for (int i = limit * offset; i < limit * offset + limit; i++) {
@@ -60,6 +64,7 @@ public class SearchService {
             FalseResponse falseResponse = new FalseResponse(error);
             return ResponseEntity.ok(falseResponse);
         }
+        pageResponseTrue.setCount(pageDataList.size());
         pageResponseTrue.setResult(true);
         pageResponseTrue.setData(result);
         return ResponseEntity.ok(pageResponseTrue);
@@ -200,4 +205,14 @@ public class SearchService {
         }
         return lemmasWithSamePage;
     }
+    private boolean checkQueryIsNew(String query){
+        if(this.query == null){
+            return true;
+        }
+        return !this.query.equals(query);
+
+
+    }
+
 }
+
