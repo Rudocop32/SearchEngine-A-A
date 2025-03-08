@@ -26,9 +26,9 @@ public class SearchService {
     private final IndexRepository indexRepository;
 
     private final LemmaCounter lemmaCounter;
-    private  List<PageData> pageDataList = new ArrayList<>();
 
-    private String query;
+
+
     private final LuceneMorphology luceneMorphology;
 
     public SearchService(LemmaRepository lemmaRepository, PageRepository pageRepository, IndexRepository indexRepository) throws IOException {
@@ -44,11 +44,11 @@ public class SearchService {
         if(offset >0){
             offset/=limit;
         }
-        if(checkQueryIsNew(query)){
-            this.query = query;
+
+
             List<String> lemmaList = lemmaCounter.saveOnlyLemmas(query);
-            pageDataList = findPagesFromLemma(lemmaList, site);
-        }
+            List<PageData> pageDataList = findPagesFromLemma(lemmaList, site);
+
         List<PageData> result = new ArrayList<>();
         for (int i = limit * offset; i < limit * offset + limit; i++) {
             try {
@@ -73,7 +73,7 @@ public class SearchService {
         List<PageEntity> pageEntityList = new ArrayList<>();
         List<PageData> pageDataList = new ArrayList<>();
         pageResponseTrue.setCount(0);
-        List<LemmaEntity> lemmaEntityList = new ArrayList<>();
+        List<LemmaEntity> lemmaEntityList;
             if(lemmaList.size() == 1){
                 String lemma = lemmaList.get(0);
                 lemmaEntityList = lemmaRepository.findByLemma(lemma);
@@ -97,7 +97,6 @@ public class SearchService {
         }
         return pageDataList;
     }
-
 
 
     public Integer getPageRelevance(PageEntity pageEntity) {
@@ -184,8 +183,7 @@ public class SearchService {
         String url = pageEntity.getPath().replace(site, "");
         String snippet = generateSnippet(pageEntity, lemmaEntity, lemmaList);
         double relevance = (double) getPageRelevance(pageEntity);
-        PageData pageData = new PageData(site, siteName, url, tittle, snippet, relevance);
-        return pageData;
+        return new PageData(site, siteName, url, tittle, snippet, relevance);
     }
 
     public boolean isGoodLemma(int frequency, int allLemmaInSite) {
@@ -204,14 +202,5 @@ public class SearchService {
         }
         return lemmasWithSamePage;
     }
-    private boolean checkQueryIsNew(String query){
-        if(this.query == null){
-            return true;
-        }
-        return !this.query.equals(query);
-
-
-    }
-
 }
 
