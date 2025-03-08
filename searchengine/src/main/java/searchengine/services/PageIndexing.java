@@ -22,12 +22,12 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.RecursiveTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static java.lang.Thread.sleep;
 
-public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
+public class PageIndexing extends RecursiveAction {
     private final SiteRepository siteRepository;
     private final ConcurrentHashMap<String, Boolean> lookedLinks;
     private final String url;
@@ -46,15 +46,15 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
         this.indexingProcessing = indexingProcessing;
     }
     @Override
-    protected ArrayList<PageEntity> compute() {
-        ArrayList<PageEntity> resultLinks = new ArrayList<>();
+    protected void compute() {
+
         try {
             Document doc = Jsoup.connect(url).timeout(100000).userAgent("Mozilla/5.0 (Windows; U; WindowsNT 5.1; en-US; rv1.8.1.6) Gecko/20070725 Firefox/2.0.0.6").referrer("http://www.google.com").get();
             Elements elements = doc.select("a[href]");
             PageEntity pageEntity = parseHtmToPageEntity(url,siteEntity,doc);
             if (!indexingProcessing.get()) {
                 stopIndexing();
-                return resultLinks;
+                return ;
             }
             siteEntity.setStatusTime(Timestamp.valueOf(LocalDateTime.now()));
             siteRepository.save(siteEntity);
@@ -64,25 +64,24 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
                 String link = element.absUrl("href");
                 if (!indexingProcessing.get()) {
                     stopIndexing();
-                    return resultLinks;
+                    return ;
                 }
                 if (link.contains(siteEntity.getUrl()) && !link.contains("#") && !link.contains(".pdf") && !link.contains(".JPG") &&!link.contains(".jpg") && !lookedLinks.containsKey(link) && indexingProcessing.get()) {
-                    forkIfLinkIsNew(link,resultLinks,pageEntity,parsers);
+                    forkIfLinkIsNew(link,pageEntity,parsers);
                 }
             }
             for (PageIndexing pageIndexing : parsers) {
                 if (!indexingProcessing.get()) {
                     stopIndexing();
-                    return resultLinks;
+                    return;
                 }
-                ArrayList<PageEntity> childLinks = pageIndexing.join();
-                resultLinks.addAll(childLinks);
+
+
             }
             setSiteIsIndexedAndSave();
         } catch (IOException | InterruptedException e) {
             e.fillInStackTrace();
         }
-        return resultLinks;
     }
 
 
@@ -121,9 +120,8 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
         }
     }
 
-    private void forkIfLinkIsNew (String link,ArrayList<PageEntity> resultLinks,PageEntity pageEntity,List<PageIndexing> parsers) {
+    private void forkIfLinkIsNew (String link,PageEntity pageEntity,List<PageIndexing> parsers) {
         lookedLinks.put(link, false);
-        resultLinks.add(pageEntity);
         PageIndexing pageIndexing = new PageIndexing(siteRepository, lookedLinks, link, level + 1, siteEntity,indexingProcessing, lemmaCounter);
         parsers.add(pageIndexing);
         pageIndexing.fork();
