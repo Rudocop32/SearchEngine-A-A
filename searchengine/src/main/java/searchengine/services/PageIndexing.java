@@ -9,20 +9,13 @@ import org.jsoup.select.Elements;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
-import org.springframework.orm.jpa.JpaSystemException;
-import searchengine.config.Site;
-import searchengine.model.IndexEntity;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
-import searchengine.repository.IndexRepository;
-import searchengine.repository.LemmaRepository;
-import searchengine.repository.PageRepository;
+
 import searchengine.repository.SiteRepository;
-
-
 import java.io.IOException;
-import java.sql.SQLIntegrityConstraintViolationException;
+
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -38,7 +31,6 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
     private final SiteRepository siteRepository;
     private final ConcurrentHashMap<String, Boolean> lookedLinks;
     private final String url;
-
     private final int level;
     private final SiteEntity siteEntity;
     private final AtomicBoolean indexingProcessing;
@@ -128,12 +120,7 @@ public class PageIndexing extends RecursiveTask<ArrayList<PageEntity>> {
             }
         }
     }
-    private boolean checkIfStreamIsStopped(AtomicBoolean isIndexing){
-        if(!isIndexing.get()){
-            stopIndexing();
-        }
-        return true;
-    }
+
     private void forkIfLinkIsNew (String link,ArrayList<PageEntity> resultLinks,PageEntity pageEntity,List<PageIndexing> parsers) {
         lookedLinks.put(link, false);
         resultLinks.add(pageEntity);
