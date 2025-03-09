@@ -140,7 +140,7 @@ public class IndexingService {
                 try {
                     PageIndexing pageIndexing = new PageIndexing(siteRepository, inputLinks, siteEntity.getUrl(), 0, siteEntity, indexingProcessing, lemmaCounter);
                     pageIndexingList.add(pageIndexing);
-                    ArrayList<PageEntity> pages = forkJoinPool.invoke(pageIndexing);
+                    forkJoinPool.invoke(pageIndexing);
                 } catch (SecurityException ex) {
                     setSiteIfError(siteEntity);
                 }
